@@ -1,0 +1,2514 @@
+openapi: 3.0.0
+info:
+  description: |
+    The Venice.ai API provides access to private, uncensored AI models for text generation, image creation, embeddings, and speech synthesis.
+    
+    **Private AI Guarantee**: Venice.ai prioritizes user privacy with a zero-retention policy. Your prompts and data are not stored, logged, or used to train models. All requests are processed in real-time and immediately discarded after response delivery.
+    
+    **Authentication**: All API requests require a valid API key passed as a Bearer token in the Authorization header. Obtain your API key from the Venice.ai dashboard.
+    
+    **Content Types**: 
+    - Request bodies: `application/json` for text/structured data, `multipart/form-data` for file uploads
+    - Responses: `application/json` for structured data, `text/event-stream` for streaming completions
+    - Images: PNG, JPEG, WebP formats supported for vision-enabled models
+    
+    **Streaming**: Real-time response generation using Server-Sent Events (SSE) with `text/event-stream`. Set `stream=true` in your request and handle the event stream with proper reconnection logic.
+    
+    **Rate Limits**: API usage is subject to rate limiting based on your subscription tier. Rate limit headers are included in all responses.
+    
+    **Getting Started**: Visit https://docs.venice.ai for quickstart guides and examples.
+  termsOfService: 'https://venice.ai/legal/tos'
+  title: Venice.ai API
+  version: '3.0.0'
+  contact:
+    name: Venice.ai API Support
+    url: 'https://venice.ai/support'
+    email: 'support@venice.ai'
+  license:
+    name: Venice.ai API License
+    url: 'https://venice.ai/legal/api-license'
+  x-logo:
+    url: 'https://venice.ai/assets/venice-logo.svg'
+    altText: 'Venice.ai - Private AI'
+    href: 'https://venice.ai'
+servers:
+  - url: 'https://api.venice.ai/api/v1'
+    description: Venice.ai Production API - All API calls for live applications
+paths:
+  /chat/completions:
+    post:
+      operationId: createChatCompletion
+      summary: Generate Chat Completion
+      description: |
+        Create a conversational AI response using Venice's private, uncensored language models.
+        
+        **Features:**
+        - **Private AI**: Zero data retention - prompts and responses are never stored or used for training
+        - **Streaming**: Real-time response generation with Server-Sent Events
+        - **Web Search**: Enable live web search and citation integration
+        - **Vision**: Support for image inputs with vision-capable models
+        - **Tool Calls**: Function calling for structured interactions
+        - **Character Personas**: Use predefined character personalities
+        
+        **Idempotency**: Use the `Idempotency-Key` header to safely retry requests. Same key returns identical response within 24 hours.
+        
+        **Rate Limits**: Requests are rate-limited per API key based on subscription tier. Check response headers for current limits.
+      tags:
+        - Chat
+      x-codeSamples:
+        - lang: curl
+          label: cURL - Simple Chat
+          source: |
+            curl -X POST "https://api.venice.ai/api/v1/chat/completions" \
+              -H "Authorization: Bearer {VENICE_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json" \
+              -d '{
+                "model": "venice-uncensored",
+                "messages": [
+                  {
+                    "role": "user",
+                    "content": "What is the capital of France?"
+                  }
+                ],
+                "temperature": 0.7,
+                "max_completion_tokens": 100
+              }'
+        
+        - lang: curl
+          label: cURL - Streaming with Web Search
+          source: |
+            curl -X POST "https://api.venice.ai/api/v1/chat/completions" \
+              -H "Authorization: Bearer {VENICE_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -H "Accept: text/event-stream" \
+              -H "Idempotency-Key: req_$(date +%s)_stream" \
+              --no-buffer \
+              -d '{
+                "model": "venice-uncensored",
+                "messages": [
+                  {
+                    "role": "user",
+                    "content": "What are the latest developments in AI?"
+                  }
+                ],
+                "stream": true,
+                "stream_options": {
+                  "include_usage": true
+                },
+                "temperature": 0.8,
+                "venice_parameters": {
+                  "enable_web_search": "auto",
+                  "enable_web_citations": true
+                }
+              }'
+        
+        - lang: javascript
+          label: JavaScript (fetch) - Simple Chat
+          source: |
+            const response = await fetch('https://api.venice.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer {VENICE_API_KEY}',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'venice-uncensored',
+                messages: [
+                  {
+                    role: 'user',
+                    content: 'What is the capital of France?'
+                  }
+                ],
+                temperature: 0.7,
+                max_completion_tokens: 100
+              })
+            });
+            
+            const data = await response.json();
+            console.log(data.choices[0].message.content);
+        
+        - lang: javascript
+          label: JavaScript - Server-Sent Events Streaming
+          source: |
+            const response = await fetch('https://api.venice.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer {VENICE_API_KEY}',
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'venice-uncensored',
+                messages: [{
+                  role: 'user',
+                  content: 'Tell me about quantum computing'
+                }],
+                stream: true,
+                temperature: 0.7
+              })
+            });
+            
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = line.slice(6);
+                  if (data === '[DONE]') return;
+                  
+                  try {
+                    const parsed = JSON.parse(data);
+                    const content = parsed.choices?.[0]?.delta?.content;
+                    if (content) {
+                      process.stdout.write(content);
+                    }
+                  } catch (e) {
+                    // Skip invalid JSON
+                  }
+                }
+              }
+            }
+        
+        - lang: python
+          label: Python (requests) - Simple Chat
+          source: |
+            import requests
+            
+            response = requests.post(
+                'https://api.venice.ai/api/v1/chat/completions',
+                headers={
+                    'Authorization': 'Bearer {VENICE_API_KEY}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'model': 'venice-uncensored',
+                    'messages': [
+                        {
+                            'role': 'user',
+                            'content': 'What is the capital of France?'
+                        }
+                    ],
+                    'temperature': 0.7,
+                    'max_completion_tokens': 100
+                }
+            )
+            
+            data = response.json()
+            print(data['choices'][0]['message']['content'])
+        
+        - lang: python
+          label: Python - Streaming with SSE
+          source: |
+            import requests
+            import json
+            
+            response = requests.post(
+                'https://api.venice.ai/api/v1/chat/completions',
+                headers={
+                    'Authorization': 'Bearer {VENICE_API_KEY}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream',
+                },
+                json={
+                    'model': 'venice-uncensored',
+                    'messages': [
+                        {
+                            'role': 'user',
+                            'content': 'Explain machine learning briefly'
+                        }
+                    ],
+                    'stream': True,
+                    'temperature': 0.7
+                },
+                stream=True
+            )
+            
+            for line in response.iter_lines():
+                if line:
+                    line = line.decode('utf-8')
+                    if line.startswith('data: '):
+                        data = line[6:]
+                        if data == '[DONE]':
+                            break
+                        try:
+                            parsed = json.loads(data)
+                            content = parsed.get('choices', [{}])[0].get('delta', {}).get('content')
+                            if content:
+                                print(content, end='', flush=True)
+                        except json.JSONDecodeError:
+                            continue
+            print()  # Final newline
+        
+        - lang: python
+          label: Python - Vision Chat with Image
+          source: |
+            import requests
+            
+            response = requests.post(
+                'https://api.venice.ai/api/v1/chat/completions',
+                headers={
+                    'Authorization': 'Bearer {VENICE_API_KEY}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'model': 'llama-3.3-70b',  # Vision-capable model
+                    'messages': [
+                        {
+                            'role': 'user',
+                            'content': [
+                                {
+                                    'type': 'text',
+                                    'text': 'What do you see in this image?'
+                                },
+                                {
+                                    'type': 'image_url',
+                                    'image_url': {
+                                        'url': 'https://example.com/image.jpg'
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    'temperature': 0.7,
+                    'max_completion_tokens': 200
+                }
+            )
+            
+            data = response.json()
+            print(data['choices'][0]['message']['content'])
+        
+        - lang: python
+          label: Python - Function Calling
+          source: |
+            import requests
+            import json
+            
+            def get_weather(location):
+                # Your weather API implementation
+                return f"The weather in {location} is sunny, 22°C"
+            
+            response = requests.post(
+                'https://api.venice.ai/api/v1/chat/completions',
+                headers={
+                    'Authorization': 'Bearer {VENICE_API_KEY}',
+                    'Content-Type': 'application/json',
+                },
+                json={
+                    'model': 'venice-uncensored',
+                    'messages': [
+                        {
+                            'role': 'user',
+                            'content': "What's the weather like in Paris?"
+                        }
+                    ],
+                    'tools': [
+                        {
+                            'type': 'function',
+                            'function': {
+                                'name': 'get_weather',
+                                'description': 'Get current weather for a location',
+                                'parameters': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'location': {
+                                            'type': 'string',
+                                            'description': 'City name or coordinates'
+                                        }
+                                    },
+                                    'required': ['location']
+                                }
+                            }
+                        }
+                    ],
+                    'tool_choice': 'auto',
+                    'temperature': 0.3
+                }
+            )
+            
+            data = response.json()
+            message = data['choices'][0]['message']
+            
+            # Handle tool calls if present
+            if message.get('tool_calls'):
+                tool_call = message['tool_calls'][0]
+                if tool_call['function']['name'] == 'get_weather':
+                    args = json.loads(tool_call['function']['arguments'])
+                    result = get_weather(args['location'])
+                    print(f"Function result: {result}")
+            else:
+                print(message['content'])
+      parameters:
+        - name: Accept-Encoding
+          in: header
+          description: |
+            Request response compression to reduce bandwidth usage.
+            Supported encodings: `gzip`, `br` (Brotli).
+            Only applied to non-streaming responses (`stream=false`).
+            Most HTTP clients handle this automatically.
+          required: false
+          schema:
+            type: string
+            enum: [gzip, br, 'gzip, br']
+            example: 'gzip, br'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+            examples:
+              simple_chat:
+                summary: Simple text conversation
+                description: Basic chat completion without special features
+                value:
+                  model: venice-uncensored
+                  messages:
+                    - role: user
+                      content: "What is the capital of France?"
+                  temperature: 0.7
+                  max_completion_tokens: 100
+              
+              streaming_chat:
+                summary: Streaming with web search
+                description: Real-time streaming response with web search integration
+                value:
+                  model: venice-uncensored
+                  messages:
+                    - role: user
+                      content: "What are the latest developments in AI technology?"
+                  stream: true
+                  stream_options:
+                    include_usage: true
+                  temperature: 0.8
+                  venice_parameters:
+                    enable_web_search: "auto"
+                    enable_web_citations: true
+              
+              vision_chat:
+                summary: Vision-enabled conversation
+                description: Chat with image analysis using vision-capable models
+                value:
+                  model: llama-3.3-70b
+                  messages:
+                    - role: user
+                      content:
+                        - type: text
+                          text: "What do you see in this image?"
+                        - type: image_url
+                          image_url:
+                            url: "https://example.com/image.jpg"
+                  temperature: 0.7
+                  max_completion_tokens: 200
+              
+              function_calling:
+                summary: Function calling example
+                description: Structured interaction using tool/function calls
+                value:
+                  model: venice-uncensored
+                  messages:
+                    - role: user
+                      content: "What's the weather like in Paris?"
+                  tools:
+                    - type: function
+                      function:
+                        name: get_weather
+                        description: Get current weather for a location
+                        parameters:
+                          type: object
+                          properties:
+                            location:
+                              type: string
+                              description: City name or coordinates
+                          required: [location]
+                  tool_choice: auto
+                  temperature: 0.3
+              
+              character_persona:
+                summary: Character-based conversation
+                description: Chat using a predefined Venice character personality
+                value:
+                  model: venice-uncensored
+                  messages:
+                    - role: user
+                      content: "Tell me about quantum physics in simple terms"
+                  temperature: 0.9
+                  venice_parameters:
+                    character_slug: "venice"
+                    include_venice_system_prompt: true
+              
+              reasoning_model:
+                summary: Reasoning model with thinking
+                description: Use models with explicit reasoning capabilities
+                value:
+                  model: qwen-2.5-72b-reasoning
+                  messages:
+                    - role: user
+                      content: "Solve this logic puzzle: If all roses are flowers and some flowers are red, can we conclude that some roses are red?"
+                  temperature: 0.1
+                  venice_parameters:
+                    disable_thinking: false
+                    strip_thinking_response: false
+      responses:
+        '200':
+          description: |
+            Successful chat completion response.
+            Contains the AI-generated response along with metadata about token usage,
+            model information, and Venice-specific parameters used in the request.
+          headers:
+            Content-Encoding:
+              description: The encoding used to compress the response
+              schema:
+                type: string
+                enum:
+                  - gzip
+                  - br
+            X-Request-ID:
+              description: Unique identifier for this request (useful for debugging)
+              schema:
+                type: string
+                example: req_2024_chat_abc123
+            X-RateLimit-Limit:
+              description: The rate limit ceiling for your API key
+              schema:
+                type: integer
+                example: 1000
+            X-RateLimit-Remaining:
+              description: The number of requests remaining in the current rate limit window
+              schema:
+                type: integer
+                example: 999
+            X-RateLimit-Reset:
+              description: The time at which the current rate limit window resets (Unix timestamp)
+              schema:
+                type: integer
+                example: 1625097600
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  choices:
+                    description: A list of chat completion choices. Can be more than one if n is greater than 1.
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        finish_reason:
+                          description: The reason the completion finished.
+                          type: string
+                          example: stop
+                          enum:
+                            - stop
+                            - length
+                        index:
+                          description: The index of the choice in the list.
+                          type: integer
+                          example: 0
+                        logprobs:
+                          type: object
+                          nullable: true
+                          properties:
+                            bytes:
+                              description: Raw bytes of the token
+                              type: array
+                              items:
+                                type: number
+                              example:
+                                - 104
+                                - 101
+                                - 108
+                                - 108
+                                - 111
+                            logprob:
+                              description: The log probability of this token
+                              type: number
+                              example: -0.34
+                            token:
+                              description: The token string
+                              type: string
+                              example: hello
+                            top_logprobs:
+                              description: Top tokens considered with their log probabilities
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  bytes:
+                                    type: array
+                                    items:
+                                      type: number
+                                  logprob:
+                                    type: number
+                                  token:
+                                    type: string
+                                required:
+                                  - logprob
+                                  - token
+                          required:
+                            - logprob
+                            - token
+                        message:
+                          anyOf:
+                            - type: object
+                              properties:
+                                content:
+                                  description: Message content - can be text, array of content objects, or null
+                                  anyOf:
+                                    - type: string
+                                      title: String
+                                    - type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          text:
+                                            description: The prompt text of the message. Must be at-least one character in length
+                                            type: string
+                                            example: Why is the sky blue?
+                                            minLength: 1
+                                            title: Text Content Object
+                                          type:
+                                            type: string
+                                            enum:
+                                              - text
+                                            title: Text Content String
+                                        required:
+                                          - text
+                                          - type
+                                        additionalProperties: false
+                                        description: Text message type.
+                                        example:
+                                          text: Why is the sky blue?
+                                          type: text
+                                        title: text
+                                      title: Objects
+                                name:
+                                  type: string
+                                reasoning_content:
+                                  type: string
+                                  nullable: true
+                                role:
+                                  type: string
+                                  enum:
+                                    - assistant
+                                tool_calls:
+                                  type: array
+                                  items: {}
+                                  nullable: true
+                              required:
+                                - role
+                              description: The assistant message contains the response from the LLM. Must have either content or tool_calls.
+                              title: Assistant Message
+                            - type: object
+                              properties:
+                                content:
+                                  type: string
+                                name:
+                                  type: string
+                                reasoning_content:
+                                  type: string
+                                  nullable: true
+                                role:
+                                  type: string
+                                  enum:
+                                    - tool
+                                tool_call_id:
+                                  type: string
+                                tool_calls:
+                                  type: array
+                                  items: {}
+                                  nullable: true
+                              required:
+                                - content
+                                - role
+                                - tool_call_id
+                              description: The tool message is a special message that is used to call a tool. It is not part of the conversation and is not visible to the user.
+                              title: Tool Message
+                        stop_reason:
+                          description: The reason the completion stopped.
+                          type: string
+                          example: stop
+                          enum:
+                            - stop
+                            - length
+                          nullable: true
+                      required:
+                        - finish_reason
+                        - index
+                        - logprobs
+                        - message
+                    example:
+                      - finish_reason: stop
+                        index: 0
+                        logprobs: null
+                        message:
+                          content: 'The sky appears blue because of the way Earth''s atmosphere scatters sunlight. When sunlight reaches Earth''s atmosphere, it is made up of various colors of the spectrum, but blue light waves are shorter and scatter more easily when they hit the gases and particles in the atmosphere. This scattering occurs in all directions, but from our perspective on the ground, it appears as a blue hue that dominates the sky''s color. This phenomenon is known as Rayleigh scattering. During sunrise and sunset, the sunlight has to travel further through the atmosphere, which allows more time for the blue light to scatter away from our direct line of sight, leaving the longer wavelengths, such as red, yellow, and orange, to dominate the sky''s color.'
+                          reasoning_content: null
+                          role: assistant
+                          tool_calls: []
+                        stop_reason: null
+                  created:
+                    description: The time at which the request was created.
+                    type: integer
+                    example: 1677858240
+                  id:
+                    description: The ID of the request.
+                    type: string
+                    example: chatcmpl-abc123
+                  model:
+                    description: The model id used for the request.
+                    type: string
+                    example: venice-uncensored
+                  object:
+                    description: The type of the object returned.
+                    type: string
+                    example: chat.completion
+                    enum:
+                      - chat.completion
+                  prompt_logprobs:
+                    description: Log probability information for the prompt.
+                    nullable: true
+                    type: object
+                    additionalProperties: {}
+                  usage:
+                    type: object
+                    properties:
+                      completion_tokens:
+                        description: The number of tokens in the completion.
+                        type: integer
+                        example: 20
+                      prompt_tokens:
+                        description: The number of tokens in the prompt.
+                        type: integer
+                        example: 10
+                      prompt_tokens_details:
+                        description: Breakdown of tokens used in the prompt. Not presently used by Venice.
+                        type: object
+                        nullable: true
+                        properties: {}
+                      total_tokens:
+                        description: The total number of tokens used in the request.
+                        type: integer
+                        example: 30
+                    required:
+                      - completion_tokens
+                      - prompt_tokens
+                      - total_tokens
+                  venice_parameters:
+                    description: Unique parameters to Venice's API implementation.
+                    type: object
+                    properties:
+                      enable_web_search:
+                        description: Did the request enable web search?
+                        type: string
+                        example: auto
+                        enum:
+                          - auto
+                          - 'false'
+                          - 'true'
+                      enable_web_citations:
+                        description: Did the request enable web citations?
+                        type: boolean
+                        example: true
+                      include_venice_system_prompt:
+                        description: Did the request include the Venice system prompt?
+                        type: boolean
+                        example: true
+                      include_search_results_in_stream:
+                        description: Did the request include search results in the stream?
+                        type: boolean
+                        example: false
+                      return_search_results_as_documents:
+                        description: Did the request also return search results as a tool-call documents block?
+                        type: boolean
+                        example: true
+                      character_slug:
+                        description: The character slug of a public Venice character.
+                        type: string
+                        example: venice
+                      strip_thinking_response:
+                        description: Did the request strip thinking response?
+                        type: boolean
+                        example: true
+                      disable_thinking:
+                        description: Did the request disable thinking?
+                        type: boolean
+                        example: true
+                      web_search_citations:
+                        description: Citations from web search results.
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            content:
+                              type: string
+                            date:
+                              type: string
+                            title:
+                              type: string
+                            url:
+                              type: string
+                          required:
+                            - title
+                            - url
+                        example:
+                          - content: What&#x27;s the scientific reason behind Earth&#x27;s sky appearing blue to the human eye? And what&#x27;s the real colour of the sky?
+                            date: '2024-08-13T13:45:16Z'
+                            title: Why is the sky blue? | BBC Sky at Night Magazine
+                            url: 'https://www.skyatnightmagazine.com/space-science/why-is-the-sky-blue'
+                          - content: 'It was around 1870 when the British physicist John William Strutt, better known as Lord Rayleigh, first found an explanation for why the sky is blue: Blue light from the Sun is scattered the most when it passes through the atmosphere.'
+                            date: '2025-04-16T16:55:11Z'
+                            title: Why is the sky blue?
+                            url: 'https://theconversation.com/why-is-the-sky-blue-246393'
+                    required:
+                      - enable_web_search
+                      - enable_web_citations
+                      - include_venice_system_prompt
+                      - include_search_results_in_stream
+                      - return_search_results_as_documents
+                      - strip_thinking_response
+                      - disable_thinking
+                example:
+                  choices:
+                    - finish_reason: stop
+                      index: 0
+                      logprobs: null
+                      message:
+                        content: 'The sky appears blue because of the way Earth''s atmosphere scatters sunlight. When sunlight reaches Earth''s atmosphere, it is made up of various colors of the spectrum, but blue light waves are shorter and scatter more easily when they hit the gases and particles in the atmosphere. This scattering occurs in all directions, but from our perspective on the ground, it appears as a blue hue that dominates the sky''s color. This phenomenon is known as Rayleigh scattering. During sunrise and sunset, the sunlight has to travel further through the atmosphere, which allows more time for the blue light to scatter away from our direct line of sight, leaving the longer wavelengths, such as red, yellow, and orange, to dominate the sky''s color.'
+                        reasoning_content: null
+                        role: assistant
+                        tool_calls: []
+                      stop_reason: null
+                  created: 1739928524
+                  id: chatcmpl-a81fbc2d81a7a083bb83ccf9f44c6e5e
+                  model: qwen-2.5-vl
+                  object: chat.completion
+                  prompt_logprobs: null
+                  usage:
+                    completion_tokens: 146
+                    prompt_tokens: 612
+                    prompt_tokens_details: null
+                    total_tokens: 758
+                  venice_parameters:
+                    include_venice_system_prompt: true
+                    include_search_results_in_stream: false
+                    return_search_results_as_documents: false
+                    web_search_citations: []
+                    enable_web_search: auto
+                    enable_web_citations: true
+                    strip_thinking_response: true
+                    disable_thinking: true
+                    character_slug: venice
+                required:
+                  - choices
+                  - created
+                  - id
+                  - model
+                  - object
+                  - usage
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+                description: |
+                  Server-sent events stream for real-time response generation when `stream=true`.
+                  
+                  **Event Format**: Each event follows the standard SSE format:
+                  ```
+                  data: {"id":"chatcmpl-123","object":"chat.completion.chunk",...}
+                  
+                  ```
+                  
+                  **Events**:
+                  - `data: {"object":"chat.completion.chunk",...}` - Partial completion chunks
+                  - `data: [DONE]` - End of stream marker
+                  
+                  **Usage**: Include `stream_options: {include_usage: true}` to receive usage statistics in the final chunk.
+                  
+                  **Timeouts**: Connections timeout after 60 seconds of inactivity. Implement exponential backoff (1s, 2s, 4s, 8s max) for reconnection.
+                  
+                  **Error Handling**: Errors are sent as regular JSON objects, not SSE format.
+              examples:
+                streaming_response:
+                  summary: Example SSE stream chunks
+                  value: |
+                    data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1677652288,"model":"venice-uncensored","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+                    
+                    data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1677652288,"model":"venice-uncensored","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}
+                    
+                    data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1677652288,"model":"venice-uncensored","choices":[{"index":0,"delta":{"content":" world"},"finish_reason":null}]}
+                    
+                    data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1677652288,"model":"venice-uncensored","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+                    
+                    data: [DONE]
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+components:
+  parameters:
+    # Pagination parameters for list endpoints
+    PageSize:
+      name: page_size
+      in: query
+      description: Number of items to return per page (1-100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+        example: 20
+    
+    PageToken:
+      name: page_token
+      in: query
+      description: Pagination token from previous response to fetch next page
+      required: false
+      schema:
+        type: string
+        example: eyJjcmVhdGVkX2F0IjoiMjAyNC0wMS0wMVQwMDowMDowMFoifQ
+    
+    # Filtering and sorting parameters
+    SortOrder:
+      name: order
+      in: query
+      description: Sort order for results
+      required: false
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+        example: desc
+    
+    # Idempotency parameter
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      description: |
+        Optional idempotency key to prevent duplicate operations. 
+        Use the same key for retries of the same logical request.
+        Keys expire after 24 hours.
+      required: false
+      schema:
+        type: string
+        pattern: '^[a-zA-Z0-9_-]{1,255}$'
+        example: req_2024_chat_abc123
+        maxLength: 255
+  
+  schemas:
+    ChatCompletionRequest:
+      type: object
+      properties:
+        frequency_penalty:
+          description: 'Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model''s likelihood to repeat the same line verbatim.'
+          type: number
+          default: 0
+          maximum: 2
+          minimum: -2
+        logprobs:
+          description: Whether to include log probabilities in the response. This is not supported by all models.
+          type: boolean
+          example: true
+        top_logprobs:
+          description: The number of highest probability tokens to return for each token position.
+          type: integer
+          example: 1
+          minimum: 0
+        max_completion_tokens:
+          description: 'An upper bound for the number of tokens that can be generated for a completion, including visible output tokens and reasoning tokens.'
+          type: integer
+          maximum: 4096
+        max_temp:
+          description: Maximum temperature value for dynamic temperature scaling.
+          type: number
+          example: 1.5
+          maximum: 2
+          minimum: 0
+        max_tokens:
+          description: The maximum number of tokens that can be generated in the chat completion. This value can be used to control costs for text generated via API. This value is now deprecated in favor of max_completion_tokens.
+          type: integer
+          maximum: 4096
+        messages:
+          description: 'A list of messages comprising the conversation so far. Depending on the model you use, different message types (modalities) are supported, like text and images. For compatibility purposes, the schema supports submitting multiple image_url messages, however, only the last image_url message will be passed to and processed by the model.'
+          type: array
+          items:
+            anyOf:
+              - type: object
+                properties:
+                  content:
+                    anyOf:
+                      - type: string
+                        title: String
+                      - type: array
+                        items:
+                          oneOf:
+                            - type: object
+                              properties:
+                                text:
+                                  description: The prompt text of the message. Must be at-least one character in length
+                                  type: string
+                                  example: Why is the sky blue?
+                                  minLength: 1
+                                  title: Text Content Object
+                                type:
+                                  type: string
+                                  enum:
+                                    - text
+                                  title: Text Content String
+                              required:
+                                - text
+                                - type
+                              additionalProperties: false
+                              description: Text message type.
+                              example:
+                                text: Why is the sky blue?
+                                type: text
+                              title: text
+                            - type: object
+                              properties:
+                                image_url:
+                                  description: Object containing the image URL information
+                                  type: object
+                                  properties:
+                                    url:
+                                      description: The URL of the image. Can be a data URL with a base64 encoded image or a public URL. URL must be publicly accessible. Image must pass validation checks and be >= 64 pixels square.
+                                      type: string
+                                      format: uri
+                                  required:
+                                    - url
+                                  title: Image URL Object
+                                type:
+                                  type: string
+                                  enum:
+                                    - image_url
+                              required:
+                                - image_url
+                                - type
+                              additionalProperties: false
+                              description: image_url message type.
+                              title: image_url
+                        title: Objects
+                  role:
+                    type: string
+                    enum:
+                      - user
+                required:
+                  - content
+                  - role
+                description: The user message is the input from the user. It is part of the conversation and is visible to the assistant.
+                title: User Message
+              - type: object
+                properties:
+                  content:
+                    description: Message content - can be text, array of content objects, or null
+                    anyOf:
+                      - type: string
+                        title: String
+                      - type: array
+                        items:
+                          type: object
+                          properties:
+                            text:
+                              description: The prompt text of the message. Must be at-least one character in length
+                              type: string
+                              example: Why is the sky blue?
+                              minLength: 1
+                              title: Text Content Object
+                            type:
+                              type: string
+                              enum:
+                                - text
+                              title: Text Content String
+                          required:
+                            - text
+                            - type
+                          additionalProperties: false
+                          description: Text message type.
+                          example:
+                            text: Why is the sky blue?
+                            type: text
+                          title: text
+                        title: Objects
+                  name:
+                    type: string
+                  reasoning_content:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum:
+                      - assistant
+                  tool_calls:
+                    type: array
+                    items: {}
+                    nullable: true
+                required:
+                  - role
+                description: The assistant message contains the response from the LLM. Must have either content or tool_calls.
+                title: Assistant Message
+              - type: object
+                properties:
+                  content:
+                    type: string
+                  name:
+                    type: string
+                  reasoning_content:
+                    type: string
+                    nullable: true
+                  role:
+                    type: string
+                    enum:
+                      - tool
+                  tool_call_id:
+                    type: string
+                  tool_calls:
+                    type: array
+                    items: {}
+                    nullable: true
+                required:
+                  - content
+                  - role
+                  - tool_call_id
+                description: The tool message is a special message that is used to call a tool. It is not part of the conversation and is not visible to the user.
+                title: Tool Message
+              - type: object
+                properties:
+                  content:
+                    anyOf:
+                      - type: string
+                        title: String
+                      - type: array
+                        items:
+                          type: object
+                          properties:
+                            text:
+                              description: The prompt text of the message. Must be at-least one character in length
+                              type: string
+                              example: Why is the sky blue?
+                              minLength: 1
+                              title: Text Content Object
+                            type:
+                              type: string
+                              enum:
+                                - text
+                              title: Text Content String
+                          required:
+                            - text
+                            - type
+                          additionalProperties: false
+                          description: Text message type.
+                          example:
+                            text: Why is the sky blue?
+                            type: text
+                          title: text
+                        title: Objects
+                  name:
+                    type: string
+                  role:
+                    type: string
+                    enum:
+                      - system
+                required:
+                  - content
+                  - role
+                description: The system message is a special message that provides context to the model. It is not part of the conversation and is not visible to the user.
+                title: System Message
+          minItems: 1
+        min_p:
+          description: Sets a minimum probability threshold for token selection. Tokens with probabilities below this value are filtered out.
+          type: number
+          example: 0.05
+          maximum: 1
+          minimum: 0
+        min_temp:
+          description: Minimum temperature value for dynamic temperature scaling.
+          type: number
+          example: 0.1
+          maximum: 2
+          minimum: 0
+        model:
+          description: 'The ID of the model you wish to prompt. May also be a model trait, or a model compatibility mapping. See the models endpoint for a list of models available to you. You can use feature suffixes to enable features from the venice_parameters object. Please see "Model Feature Suffix" documentation for more details.'
+          type: string
+          example: venice-uncensored
+        'n':
+          description: How many chat completion choices to generate for each input message. Note that you will be charged based on the number of generated tokens across all of the choices. Keep n as 1 to minimize costs.
+          type: integer
+          default: 1
+        presence_penalty:
+          description: 'Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model''s likelihood to talk about new topics.'
+          type: number
+          default: 0
+          maximum: 2
+          minimum: -2
+        repetition_penalty:
+          description: The parameter for repetition penalty. 1.0 means no penalty. Values > 1.0 discourage repetition.
+          type: number
+          example: 1.2
+          minimum: 0
+        seed:
+          description: The random seed used to generate the response. This is useful for reproducibility.
+          type: integer
+          example: 42
+          exclusiveMinimum: true
+          minimum: 0
+        stop:
+          description: Up to 4 sequences where the API will stop generating further tokens. Defaults to null.
+          anyOf:
+            - type: string
+              title: String
+            - type: array
+              items:
+                type: string
+              minItems: 1
+              maxItems: 4
+              title: Array of Strings
+        stop_token_ids:
+          description: Array of token IDs where the API will stop generating further tokens.
+          type: array
+          items:
+            type: integer
+          example:
+            - 151643
+            - 151645
+        stream:
+          description: Whether to stream back partial progress. Defaults to false.
+          type: boolean
+          example: true
+        stream_options:
+          type: object
+          properties:
+            include_usage:
+              description: Whether to include usage information in the stream.
+              type: boolean
+        temperature:
+          description: 'What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. We generally recommend altering this or top_p but not both.'
+          type: number
+          example: 0.7
+          default: 0.7
+          maximum: 2
+          minimum: 0
+        top_k:
+          description: The number of highest probability vocabulary tokens to keep for top-k-filtering.
+          type: integer
+          example: 40
+          minimum: 0
+        top_p:
+          description: 'An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.'
+          type: number
+          example: 0.9
+          default: 0.9
+          maximum: 1
+          minimum: 0
+        user:
+          description: This field is discarded on the request but is supported in the Venice API for compatibility with OpenAI clients.
+          type: string
+        venice_parameters:
+          description: Unique parameters to Venice's API implementation. Customize these to control the behavior of the model.
+          type: object
+          properties:
+            character_slug:
+              description: The character slug of a public Venice character. Discoverable as the "Public ID" on the published character page.
+              type: string
+            strip_thinking_response:
+              description: Strip <think></think> blocks from the response. Applicable only to reasoning / thinking models. Also available to use as a model feature suffix. Defaults to false.
+              type: boolean
+              example: false
+              default: false
+            disable_thinking:
+              description: 'On supported reasoning models, will disable thinking and strip the <think></think> blocks from the response. Defaults to false.'
+              type: boolean
+              example: false
+              default: false
+            enable_web_search:
+              description: 'Enable web search for this request. Defaults to off. On will force web search on the request. Auto will enable it based on the model''s discretion. Citations will be returned either in the first chunk of a streaming result, or in the non streaming response.'
+              type: string
+              example: 'false'
+              default: 'false'
+              enum:
+                - auto
+                - 'false'
+                - 'true'
+            enable_web_citations:
+              description: 'When web search is enabled, this will request that the LLM cite its sources using a [REF]0[/REF] format. Defaults to false.'
+              type: boolean
+              default: false
+            include_search_results_in_stream:
+              description: 'Experimental feature - When set to true, the LLM will include search results in the stream as the first emitted chunk. Defaults to false.'
+              type: boolean
+              default: false
+            return_search_results_as_documents:
+              description: 'When set, search results are also surfaced in an OpenAI-compatible tool call named "venice_web_search_documents" to ease LangChain consumption.'
+              type: boolean
+            include_venice_system_prompt:
+              description: Whether to include the Venice supplied system prompts along side specified system prompts. Defaults to true.
+              type: boolean
+              default: true
+        parallel_tool_calls:
+          description: Whether to enable parallel function calling during tool use.
+          type: boolean
+          example: false
+          default: true
+        response_format:
+          description: Format in which the response should be returned.
+          oneOf:
+            - type: object
+              properties:
+                json_schema:
+                  type: object
+                  additionalProperties: true
+                type:
+                  type: string
+                  enum:
+                    - json_schema
+              required:
+                - json_schema
+                - type
+              additionalProperties: false
+              description: The JSON Schema that should be used to validate and format the response.
+              example:
+                json_schema:
+                  properties:
+                    age:
+                      type: number
+                    name:
+                      type: string
+                  required:
+                    - name
+                    - age
+                  type: object
+                type: json_schema
+              title: json_schema
+            - type: object
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - json_object
+              required:
+                - type
+              additionalProperties: false
+              description: The response should be formatted as a JSON object. This is a deprecated implementation and the preferred use is json_schema.
+              title: json_object
+        tool_choice:
+          anyOf:
+            - type: object
+              properties:
+                function:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    name:
+                      type: string
+                  required:
+                    - name
+                type:
+                  type: string
+              required:
+                - function
+                - type
+              additionalProperties: false
+            - type: string
+        tools:
+          description: 'A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for.'
+          type: array
+          items:
+            type: object
+            properties:
+              function:
+                type: object
+                additionalProperties: false
+                properties:
+                  description:
+                    type: string
+                  name:
+                    type: string
+                  parameters:
+                    additionalProperties: {}
+                    type: object
+                  strict:
+                    description: 'If set to true, the model will follow the exact schema defined in the parameters field. Only a subset of JSON Schema is supported when strict is true.'
+                    type: boolean
+                    example: false
+                    default: false
+                required:
+                  - name
+              id:
+                type: string
+              type:
+                type: string
+            required:
+              - function
+            description: 'A tool that can be called by the model. Currently, only functions are supported as tools.'
+            title: Tool Call
+          nullable: true
+      additionalProperties: false
+      required:
+        - messages
+        - model
+    GenerateImageRequest:
+      type: object
+      properties:
+        cfg_scale:
+          description: CFG scale parameter. Higher values lead to more adherence to the prompt.
+          type: number
+          example: 7.5
+          exclusiveMinimum: true
+          maximum: 20
+          minimum: 0
+        embed_exif_metadata:
+          description: Embed prompt generation information into the image's EXIF metadata.
+          type: boolean
+          example: false
+          default: false
+        format:
+          description: 'The image format to return. WebP are smaller and optimized for web use. PNG are higher quality but larger in file size. '
+          type: string
+          example: webp
+          default: webp
+          enum:
+            - jpeg
+            - png
+            - webp
+        height:
+          description: Height of the generated image. Each model has a specific height and width divisor listed in the widthHeightDivisor constraint in the model list endpoint.
+          type: integer
+          example: 1024
+          default: 1024
+          exclusiveMinimum: true
+          maximum: 1280
+          minimum: 0
+        hide_watermark:
+          description: Whether to hide the Venice watermark. Venice may ignore this parameter for certain generated content.
+          type: boolean
+          example: false
+          default: false
+        inpaint:
+          description: 'This feature is deprecated and was disabled on May 19th, 2025. A revised in-painting API will be launched in the near future.'
+          type: object
+          nullable: true
+          deprecated: true
+        lora_strength:
+          description: Lora strength for the model. Only applies if the model uses additional Loras.
+          type: integer
+          example: 50
+          maximum: 100
+          minimum: 0
+        model:
+          description: The model to use for image generation.
+          type: string
+          example: hidream
+        negative_prompt:
+          description: A description of what should not be in the image. Character limit is model specific and is listed in the promptCharacterLimit constraint in the model list endpoint.
+          type: string
+          example: 'Clouds, Rain, Snow'
+          maxLength: 1500
+        prompt:
+          description: The description for the image. Character limit is model specific and is listed in the promptCharacterLimit setting in the model list endpoint.
+          type: string
+          example: A beautiful sunset over a mountain range
+          maxLength: 1500
+          minLength: 1
+        return_binary:
+          description: Whether to return binary image data instead of base64.
+          type: boolean
+          example: false
+          default: false
+        variants:
+          description: Number of images to generate (1–4). Only supported when return_binary is false.
+          type: integer
+          example: 3
+          maximum: 4
+          minimum: 1
+        safe_mode:
+          description: 'Whether to use safe mode. If enabled, this will blur images that are classified as having adult content.'
+          type: boolean
+          example: false
+          default: true
+        seed:
+          description: 'Random seed for generation. If not provided, a random seed will be used.'
+          type: integer
+          example: 123456789
+          default: 0
+          maximum: 999999999
+          minimum: -999999999
+        steps:
+          description: 'Number of inference steps. The following models have reduced max steps from the global max: venice-sd35: 30 max steps, hidream: 50 max steps, flux.1-krea: 30 max steps, flux-dev: 30 max steps, flux-dev-uncensored: 30 max steps, lustify-sdxl: 50 max steps, lustify-v7: 25 max steps, qwen-image: 8 max steps, wai-Illustrious: 30 max steps. These constraints are exposed in the model list endpoint for each model.'
+          type: integer
+          example: 20
+          default: 20
+          exclusiveMinimum: true
+          maximum: 50
+          minimum: 0
+        style_preset:
+          description: 'An image style to apply to the image. Visit https://docs.venice.ai/api-reference/endpoint/image/styles for more details.'
+          type: string
+          example: 3D Model
+        width:
+          description: Width of the generated image. Each model has a specific height and width divisor listed in the widthHeightDivisor constraint in the model list endpoint.
+          type: integer
+          example: 1024
+          default: 1024
+          exclusiveMinimum: true
+          maximum: 1280
+          minimum: 0
+      additionalProperties: false
+      required:
+        - model
+        - prompt
+    SimpleGenerateImageRequest:
+      type: object
+      properties:
+        background:
+          description: This parameter is not used in Venice image generation but is supported for compatibility with OpenAI API
+          type: string
+          example: auto
+          default: auto
+          enum:
+            - transparent
+            - opaque
+            - auto
+        model:
+          description: 'The model to use for image generation. Defaults to Venice''s default image model. If a non-existent model is specified (ie an OpenAI model name), it will default to Venice''s default image model.'
+          type: string
+          example: hidream
+          default: hidream
+        moderation:
+          description: auto enables safe venice mode which will blur out adult content. low disables safe venice mode.
+          type: string
+          example: auto
+          default: auto
+          enum:
+            - low
+            - auto
+        'n':
+          description: Number of images to generate. Venice presently only supports 1 image per request.
+          type: integer
+          example: 1
+          default: 1
+          maximum: 1
+          minimum: 1
+        output_compression:
+          description: This parameter is not used in Venice image generation but is supported for compatibility with OpenAI API
+          type: integer
+          default: 100
+          maximum: 100
+          minimum: 0
+        output_format:
+          description: Output format for generated images
+          type: string
+          example: png
+          default: png
+          enum:
+            - jpeg
+            - png
+            - webp
+        prompt:
+          description: A text description of the desired image.
+          type: string
+          example: A beautiful sunset over mountain ranges
+          maxLength: 1500
+          minLength: 1
+        quality:
+          description: This parameter is not used in Venice image generation but is supported for compatibility with OpenAI API
+          type: string
+          example: auto
+          default: auto
+          enum:
+            - auto
+            - high
+            - medium
+            - low
+            - hd
+            - standard
+        response_format:
+          description: Response format. URL will be a data URL.
+          type: string
+          example: b64_json
+          default: b64_json
+          enum:
+            - b64_json
+            - url
+        size:
+          description: Size of generated images. Default is 1024x1024
+          type: string
+          example: 1024x1024
+          default: auto
+          enum:
+            - auto
+            - 256x256
+            - 512x512
+            - 1024x1024
+            - 1536x1024
+            - 1024x1536
+            - 1792x1024
+            - 1024x1792
+        style:
+          description: This parameter is not used in Venice image generation but is supported for compatibility with OpenAI API
+          type: string
+          example: natural
+          default: natural
+          enum:
+            - vivid
+            - natural
+        user:
+          description: This parameter is not used in Venice image generation but is supported for compatibility with OpenAI API
+          type: string
+          example: user123
+      additionalProperties: false
+      required:
+        - prompt
+    UpscaleImageRequest:
+      description: Upscale or enhance an image based on the supplied parameters. Using a scale of 1 with enhance enabled will only run the enhancer.
+      type: object
+      properties:
+        enhance:
+          description: Enhance / denoise toggle
+          type: boolean
+          default: false
+        enhanceCreativity:
+          description: Higher values let the enhancement AI change the image more. Setting this to 1 effectively creates an entirely new image.
+          type: number
+          example: 0.5
+          default: 0.5
+          maximum: 1
+          minimum: 0
+          nullable: true
+        enhancePrompt:
+          description: 'The text to image style to apply during prompt enhancement. Does best with short descriptive prompts, like gold, marble or angry, menacing.'
+          type: string
+          example: gold
+          maxLength: 1500
+        image:
+          description: 'The image to upscale. Can be a file upload (multipart/form-data), base64-encoded string (JSON), or public URL.'
+          oneOf:
+            - type: string
+              format: binary
+              description: File upload for multipart/form-data
+            - type: string
+              format: byte
+              description: Base64-encoded image data for JSON requests
+            - type: string
+              format: uri
+              description: Publicly accessible image URL
+        replication:
+          description: How strongly lines and noise in the base image are preserved. Higher values are noisier but less plastic/AI "generated"/hallucinated. Must be between 0 and 1.
+          type: number
+          example: 0.35
+          default: 0.35
+          maximum: 1
+          minimum: 0
+          nullable: true
+        scale:
+          description: 'The scale factor for upscaling the image. Must be 1, 2, or 4. Scale of 1 requires enhance to be set true and will only run the enhancer.'
+          type: integer
+          example: 2
+          default: 2
+          enum:
+            - 1
+            - 2
+            - 4
+          maximum: 4
+          minimum: 1
+      example:
+        enhance: true
+        enhanceCreativity: 0.5
+        enhancePrompt: gold
+        image: iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAAIGNIUk0A...
+        scale: 2
+      additionalProperties: false
+      required:
+        - image
+    EditImageRequest:
+      description: Edit an image based on the supplied prompt.
+      type: object
+      properties:
+        prompt:
+          description: 'The text directions to edit or modify the image. Does best with short but descriptive prompts. IE: "Change the color of", "remove the object", "change the sky to a sunrise", etc.'
+          type: string
+          example: Change the color of the sky to a sunrise
+          maxLength: 1500
+        image:
+          description: 'The image to edit. Can be a file upload (multipart/form-data), base64-encoded string (JSON), or public URL.'
+          oneOf:
+            - type: string
+              format: binary
+              description: File upload for multipart/form-data
+            - type: string
+              format: byte
+              description: Base64-encoded image data for JSON requests
+            - type: string
+              format: uri
+              description: 'Publicly accessible image URL (http:// or https://)'
+      example:
+        prompt: Colorize
+        image: iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAAIGNIUk0A...
+      additionalProperties: false
+      required:
+        - prompt
+        - image
+    CreateEmbeddingRequestSchema:
+      description: Create embeddings for the supplied input.
+      type: object
+      properties:
+        dimensions:
+          description: The number of dimensions the resulting output embeddings should have.
+          type: integer
+          minimum: 1
+        encoding_format:
+          description: The format to return the embeddings in. Can be either `float` or `base64`.
+          type: string
+          example: float
+          default: float
+          enum:
+            - float
+            - base64
+        input:
+          description: 'Input text to embed, encoded as a string or array of tokens. To embed multiple inputs in a single request, pass an array of strings or array of token arrays. The input must not exceed the max input tokens for the model (8192 tokens), cannot be an empty string, and any array must be 2048 dimensions or less.'
+          example: The quick brown fox jumped over the lazy dog
+          anyOf:
+            - type: string
+              minLength: 1
+              description: The string that will be turned into an embedding. Cannot be an empty string.
+              example: This is a test.
+              title: string
+            - type: array
+              items:
+                type: string
+              minItems: 1
+              maxItems: 2048
+              description: The array of strings that will be turned into an embedding. Array must be 2048 dimensions or less.
+              example:
+                - This is a test.
+              title: array
+            - type: array
+              items:
+                type: integer
+                minimum: 1
+              minItems: 1
+              maxItems: 2048
+              description: The array of integers that will be turned into an embedding. Array must be 2048 dimensions or less.
+              example:
+                - 1212
+                - 318
+                - 257
+                - 1332
+                - 13
+              title: array
+            - type: array
+              items:
+                type: array
+                items:
+                  type: integer
+                minItems: 1
+              minItems: 1
+              maxItems: 2048
+              description: The array of arrays containing integers that will be turned into an embedding. Array must be 2048 dimensions or less.
+              example:
+                - - 1212
+                  - 318
+                  - 257
+                  - 1332
+                  - 13
+              title: array
+        model:
+          description: 'ID of the model to use. You can use the List models API to see all of your available models, or see our Model overview for descriptions of them.'
+          example: text-embedding-bge-m3
+          anyOf:
+            - type: string
+            - type: string
+              enum:
+                - text-embedding-bge-m3
+        user:
+          description: This is an unused parameter and is discarded by Venice. It is supported solely for API compatibility with OpenAI.
+          type: string
+      example:
+        encoding_format: float
+        input: The quick brown fox jumped over the lazy dog
+        model: text-embedding-bge-m3
+      additionalProperties: false
+      required:
+        - input
+        - model
+    CreateSpeechRequestSchema:
+      description: Request to generate audio from text.
+      type: object
+      properties:
+        input:
+          description: The text to generate audio for. The maximum length is 4096 characters.
+          type: string
+          example: 'Hello, this is a test of the text to speech system.'
+          maxLength: 4096
+          minLength: 1
+        model:
+          description: The model ID of a Venice TTS model.
+          type: string
+          example: tts-kokoro
+          default: tts-kokoro
+          enum:
+            - tts-kokoro
+        response_format:
+          description: The format to audio in.
+          type: string
+          example: mp3
+          default: mp3
+          enum:
+            - mp3
+            - opus
+            - aac
+            - flac
+            - wav
+            - pcm
+        speed:
+          description: The speed of the generated audio. Select a value from 0.25 to 4.0. 1.0 is the default.
+          type: number
+          example: 1
+          default: 1
+          maximum: 4
+          minimum: 0.25
+        streaming:
+          description: Should the content stream back sentence by sentence or be processed and returned as a complete audio file.
+          type: boolean
+          example: true
+          default: false
+        voice:
+          description: The voice to use when generating the audio.
+          type: string
+          example: af_sky
+          default: af_sky
+          enum:
+            - af_alloy
+            - af_aoede
+            - af_bella
+            - af_heart
+            - af_jadzia
+            - af_jessica
+            - af_kore
+            - af_nicole
+            - af_nova
+            - af_river
+            - af_sarah
+            - af_sky
+            - am_adam
+            - am_echo
+            - am_eric
+            - am_fenrir
+            - am_liam
+            - am_michael
+            - am_onyx
+            - am_puck
+            - am_santa
+            - bf_alice
+            - bf_emma
+            - bf_lily
+            - bm_daniel
+            - bm_fable
+            - bm_george
+            - bm_lewis
+            - zf_xiaobei
+            - zf_xiaoni
+            - zf_xiaoxiao
+            - zf_xiaoyi
+            - zm_yunjian
+            - zm_yunxi
+            - zm_yunxia
+            - zm_yunyang
+            - ff_siwis
+            - hf_alpha
+            - hf_beta
+            - hm_omega
+            - hm_psi
+            - if_sara
+            - im_nicola
+            - jf_alpha
+            - jf_gongitsune
+            - jf_nezumi
+            - jf_tebukuro
+            - jm_kumo
+            - pf_dora
+            - pm_alex
+            - pm_santa
+            - ef_dora
+            - em_alex
+            - em_santa
+      example:
+        input: 'Hello, welcome to Venice Voice.'
+        model: tts-kokoro
+        response_format: mp3
+        speed: 1
+        streaming: false
+        voice: af_sky
+      additionalProperties: false
+      required:
+        - input
+    BillingUsageRequest:
+      type: object
+      properties:
+        currency:
+          description: Filter by currency
+          type: string
+          example: USD
+          enum:
+            - USD
+            - VCU
+            - DIEM
+        endDate:
+          description: End date for filtering records (ISO 8601)
+          type: string
+          format: date-time
+          example: '2024-12-31T23:59:59Z'
+        limit:
+          description: Number of items per page
+          type: integer
+          example: 200
+          default: 200
+          exclusiveMinimum: true
+          maximum: 500
+          minimum: 0
+        page:
+          description: Page number for pagination
+          type: integer
+          example: 1
+          default: 1
+          exclusiveMinimum: true
+          minimum: 0
+        sortOrder:
+          description: Sort order for createdAt field
+          type: string
+          example: desc
+          default: desc
+          enum:
+            - asc
+            - desc
+        startDate:
+          description: Start date for filtering records (ISO 8601)
+          type: string
+          format: date-time
+          example: '2024-01-01T00:00:00Z'
+    BillingUsageResponse:
+      description: The response schema for the billing usage endpoint
+      type: object
+      properties:
+        warningMessage:
+          description: A warning message to disambiguate DIEM usage from legacy DIEM (formerly VCU) usage
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              amount:
+                description: The total amount charged for the billing usage entry
+                type: number
+              currency:
+                description: The currency charged for the billing usage entry
+                type: string
+                example: USD
+                enum:
+                  - USD
+                  - VCU
+                  - DIEM
+              inferenceDetails:
+                description: 'Details about the related inference request, if applicable'
+                type: object
+                nullable: true
+                properties:
+                  completionTokens:
+                    description: Number of tokens used in the completion. Only present for LLM usage.
+                    type: number
+                    nullable: true
+                  inferenceExecutionTime:
+                    description: Time taken for inference execution in milliseconds
+                    type: number
+                    nullable: true
+                  promptTokens:
+                    description: Number of tokens requested in the prompt. Only present for LLM usage.
+                    type: number
+                    nullable: true
+                  requestId:
+                    description: Unique identifier for the inference request
+                    type: string
+                    nullable: true
+                required:
+                  - completionTokens
+                  - inferenceExecutionTime
+                  - promptTokens
+                  - requestId
+              notes:
+                description: Notes about the billing usage entry
+                type: string
+              pricePerUnitUsd:
+                description: The price per unit in USD
+                type: number
+              sku:
+                description: The product associated with the billing usage entry
+                type: string
+              timestamp:
+                description: The timestamp the billing usage entry was created
+                type: string
+                example: '2025-01-01T00:00:00Z'
+              units:
+                description: The number of units consumed
+                type: number
+            required:
+              - amount
+              - currency
+              - inferenceDetails
+              - notes
+              - pricePerUnitUsd
+              - sku
+              - timestamp
+              - units
+        pagination:
+          type: object
+          properties:
+            limit:
+              type: number
+            page:
+              type: number
+            total:
+              type: number
+            totalPages:
+              type: number
+          required:
+            - limit
+            - page
+            - total
+            - totalPages
+      example:
+        data:
+          - amount: -0.1
+            currency: DIEM
+            inferenceDetails: null
+            notes: API Inference
+            pricePerUnitUsd: 0.1
+            sku: venice-sd35-image-unit
+            timestamp: '2025-01-01T00:00:00Z'
+            units: 1
+          - amount: -0.06356
+            currency: DIEM
+            inferenceDetails:
+              completionTokens: 227
+              inferenceExecutionTime: 2964
+              promptTokens: 339
+              requestId: chatcmpl-4007fd29f42b7d3c4107f4345e8d174a
+            notes: API Inference
+            pricePerUnitUsd: 2.8
+            sku: llama-3.3-70b-llm-output-mtoken
+            timestamp: '2025-01-01T00:00:00Z'
+            units: 0.000227
+        pagination:
+          limit: 1
+          page: 200
+          total: 56090
+          totalPages: 56090
+      additionalProperties: false
+      required:
+        - data
+        - pagination
+    ModelResponse:
+      description: Response schema for model information
+      type: object
+      properties:
+        created:
+          description: Release date on Venice API
+          type: number
+          example: 1699000000
+        id:
+          description: Model ID
+          type: string
+          example: venice-uncensored
+        model_spec:
+          type: object
+          nullable: true
+          description: Model specifications and capabilities
+          properties:
+            availableVoices:
+              description: The voices available for this TTS model. Only applicable for TTS models.
+              type: array
+              items:
+                type: string
+              example:
+                - af_alloy
+                - af_aoede
+                - af_bella
+                - af_heart
+                - af_jadzia
+            availableContextTokens:
+              description: The context length supported by the model. Only applicable for text models.
+              type: number
+              example: 32768
+            beta:
+              description: Is this model in beta?
+              type: boolean
+              example: false
+            capabilities:
+              description: Text model specific capabilities.
+              type: object
+              additionalProperties: false
+              properties:
+                optimizedForCode:
+                  description: Is the LLM optimized for coding?
+                  type: boolean
+                  example: true
+                quantization:
+                  description: The quantization type of the running model.
+                  type: string
+                  example: fp8
+                  enum:
+                    - fp8
+                    - fp16
+                    - bf16
+                    - not-available
+                supportsFunctionCalling:
+                  description: Does the LLM model support function calling?
+                  type: boolean
+                  example: true
+                supportsReasoning:
+                  description: Does the model support reasoning with <thinking> blocks of output.
+                  type: boolean
+                  example: true
+                supportsResponseSchema:
+                  description: Does the LLM model support response schema? Only models that support function calling can support response_schema.
+                  type: boolean
+                  example: true
+                supportsVision:
+                  description: Does the LLM support vision?
+                  type: boolean
+                  example: true
+                supportsWebSearch:
+                  description: Does the LLM model support web search?
+                  type: boolean
+                  example: true
+                supportsLogProbs:
+                  description: Does the LLM model support logprobs parameter?
+                  type: boolean
+                  example: true
+              required:
+                - optimizedForCode
+                - quantization
+                - supportsFunctionCalling
+                - supportsReasoning
+                - supportsResponseSchema
+                - supportsVision
+                - supportsWebSearch
+                - supportsLogProbs
+            constraints:
+              description: Constraints that apply to this model.
+              anyOf:
+                - type: object
+                  properties:
+                    promptCharacterLimit:
+                      description: The maximum supported prompt length.
+                      type: number
+                      example: 2048
+                    steps:
+                      type: object
+                      properties:
+                        default:
+                          description: The default steps value for the model
+                          type: number
+                          example: 25
+                        max:
+                          description: The maximum supported steps value for the model
+                          type: number
+                          example: 50
+                      required:
+                        - default
+                        - max
+                    widthHeightDivisor:
+                      description: The requested width and height of the image generation must be divisible by this value.
+                      type: number
+                      example: 8
+                  required:
+                    - promptCharacterLimit
+                    - steps
+                    - widthHeightDivisor
+                  description: Constraints that apply to image models.
+                  title: Image Model Constraints
+                - type: object
+                  properties:
+                    temperature:
+                      type: object
+                      properties:
+                        default:
+                          description: The default temperature value for the model
+                          type: number
+                          example: 0.7
+                      required:
+                        - default
+                    top_p:
+                      type: object
+                      properties:
+                        default:
+                          description: The default top_p value for the model
+                          type: number
+                          example: 0.9
+                      required:
+                        - default
+                  required:
+                    - temperature
+                    - top_p
+                  description: Constraints that apply to text models.
+                  title: Text Model Constraints
+            name:
+              description: The name of the model.
+              type: string
+              example: Venice Uncensored 1.1
+            modelSource:
+              description: 'The source of the model, such as a URL to the model repository.'
+              type: string
+              example: 'https://huggingface.co/cognitivecomputations/Dolphin-Mistral-24B-Venice-Edition'
+            offline:
+              description: Is this model presently offline?
+              type: boolean
+              example: false
+              default: false
+            pricing:
+              description: Pricing details for the model
+              anyOf:
+                - type: object
+                  properties:
+                    input:
+                      type: object
+                      properties:
+                        usd:
+                          description: USD cost per million input tokens
+                          type: number
+                          example: 0.7
+                        vcu:
+                          description: VCU cost per million input tokens (deprecated - use Diem instead)
+                          type: number
+                          example: 7
+        object:
+          description: Object type
+          type: string
+          example: model
+          enum:
+            - model
+        owned_by:
+          description: Who runs the model
+          type: string
+          example: venice.ai
+          enum:
+            - venice.ai
+        type:
+          description: Model type
+          type: string
+          example: text
+          enum:
+            - embedding
+            - image
+            - text
+            - tts
+            - upscale
+            - inpaint
+      example:
+        created: 1727966436
+        id: llama-3.2-3b
+        model_spec:
+          availableContextTokens: 131072
+          capabilities:
+            optimizedForCode: false
+            quantization: fp16
+            supportsFunctionCalling: true
+            supportsReasoning: false
+            supportsResponseSchema: true
+            supportsVision: false
+            supportsWebSearch: true
+            supportsLogProbs: true
+          constraints:
+            temperature:
+              default: 0.8
+            top_p:
+              default: 0.9
+          name: Llama 3.2 3B
+          modelSource: 'https://huggingface.co/meta-llama/Llama-3.2-3B'
+          offline: false
+          pricing:
+            input:
+              usd: 0.15
+              vcu: 1.5
+              diem: 0.15
+            output:
+              usd: 0.6
+              vcu: 6
+              diem: 0.6
+          traits:
+            - fastest
+        object: model
+        owned_by: venice.ai
+        type: text
+      required:
+        - id
+        - model_spec
+        - object
+        - owned_by
+        - type
+    ModelTraitSchema:
+      description: List of available models
+      type: object
+      example:
+        default: llama-3.3-70b
+        fastest: llama-3.2-3b-akash
+      additionalProperties:
+        type: string
+    ModelCompatibilitySchema:
+      description: List of available models
+      type: object
+      example:
+        gpt-4o: llama-3.3-70b
+      additionalProperties:
+        type: string
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code identifier
+              example: invalid_request_error
+            message:
+              type: string
+              description: Human-readable error message
+              example: The request was invalid
+            type:
+              type: string
+              description: Error type category
+              example: invalid_request_error
+            docs_url:
+              type: string
+              format: uri
+              description: URL to relevant documentation
+              example: https://docs.venice.ai/errors
+            request_id:
+              type: string
+              description: Unique request identifier for debugging
+              example: req_123abc
+          required:
+            - code
+            - message
+            - type
+      required:
+        - error
+      example:
+        error:
+          code: invalid_api_key
+          message: Invalid API key provided
+          type: authentication_error
+          docs_url: https://docs.venice.ai/authentication
+          request_id: req_123abc
+    # Reusable pagination response wrapper
+    PaginatedResponse:
+      type: object
+      description: Standard pagination wrapper for list responses
+      properties:
+        data:
+          type: array
+          description: Array of response items
+          items: {}
+        pagination:
+          type: object
+          description: Pagination metadata
+          properties:
+            has_more:
+              type: boolean
+              description: Whether there are more results available
+              example: true
+            next_page_token:
+              type: string
+              description: Token to fetch the next page of results
+              example: eyJjcmVhdGVkX2F0IjoiMjAyNC0wMS0wMVQwMDowMDowMFoifQ
+            total_count:
+              type: integer
+              description: Total number of items (optional, may not be provided for performance)
+              example: 1234
+          required:
+            - has_more
+      required:
+        - data
+        - pagination
+  responses:
+    UnauthorizedError:
+      description: Authentication failed - invalid or missing API key
+      headers:
+        X-RateLimit-Limit:
+          description: The rate limit ceiling for your API key
+          schema:
+            type: integer
+            example: 1000
+        X-RateLimit-Remaining:
+          description: The number of requests remaining in the current rate limit window
+          schema:
+            type: integer
+            example: 999
+        X-RateLimit-Reset:
+          description: The time at which the current rate limit window resets (Unix timestamp)
+          schema:
+            type: integer
+            example: 1625097600
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: invalid_api_key
+              message: Invalid API key provided. Please check your API key and try again.
+              type: authentication_error
+              docs_url: https://docs.venice.ai/authentication
+              request_id: req_123abc
+    ForbiddenError:
+      description: Access forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: insufficient_quota
+              message: You have exceeded your API quota. Please upgrade your plan.
+              type: billing_error
+              docs_url: https://docs.venice.ai/billing
+              request_id: req_456def
+    RateLimitError:
+      description: Too many requests - rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          description: The rate limit ceiling for your API key
+          schema:
+            type: integer
+            example: 1000
+        X-RateLimit-Remaining:
+          description: The number of requests remaining in the current rate limit window
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: The time at which the current rate limit window resets (Unix timestamp)
+          schema:
+            type: integer
+            example: 1625097600
+        Retry-After:
+          description: Number of seconds to wait before retrying
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: rate_limit_exceeded
+              message: Rate limit exceeded. Please wait before making another request.
+              type: rate_limit_error
+              docs_url: https://docs.venice.ai/rate-limits
+              request_id: req_789ghi
+    BadRequestError:
+      description: Bad request - invalid parameters or request format
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: invalid_request_error
+              message: The request body is malformed or missing required parameters.
+              type: invalid_request_error
+              docs_url: https://docs.venice.ai/errors
+              request_id: req_101jkl
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: internal_server_error
+              message: An unexpected error occurred. Please try again later.
+              type: server_error
+              docs_url: https://docs.venice.ai/errors
+              request_id: req_202mno
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: |
+        API Key authentication using Bearer token format.
+        
+        **How to authenticate:**
+        1. Obtain your API key from the Venice.ai dashboard
+        2. Include it in the Authorization header: `Authorization: Bearer YOUR_API_KEY`
+        
+        **Example:**
+        ```
+        curl -H "Authorization: Bearer {VENICE_API_KEY}" \\
+             -H "Content-Type: application/json" \
+             https://api.venice.ai/api/v1/chat/completions
+        ```
+        
+        **Security:** Keep your API key secure and never expose it in client-side code.
+        
+        **Rate Limiting:** API usage is tracked per key and subject to tier-based limits.
+tags:
+  - name: Chat
+    description: 'Generate conversational responses using Venice AI''s private language models. Supports streaming, tool calling, and web search integration.'
+  - name: Models  
+    description: 'List and describe the various models available in the API, including capabilities and constraints.'
+  - name: Image
+    description: 'Generate, manipulate, and enhance images using AI models. Supports multiple formats and styles.'
+  - name: Audio
+    description: 'Audio processing endpoints including speech synthesis and transcription.'
+  - name: Speech
+    description: 'Text-to-speech synthesis with multiple voice options and quality settings.'
+  - name: Embeddings
+    description: 'Generate vector embeddings for text input using various embedding models.'
+  - name: Characters
+    description: 'Access Venice AI character personalities for enhanced conversational experiences.'
+  - name: Billing
+    description: 'Monitor API usage, billing information, and account limits.'
+  - name: API Keys
+    description: 'Manage API key authentication and access controls.'
+  - name: Preview
+    description: 'Preview and experimental endpoints for testing new features.'
+x-tagGroups:
+  - name: Core AI Services
+    tags:
+      - Chat
+      - Image
+      - Audio
+      - Speech
+      - Embeddings
+  - name: Platform
+    tags:
+      - Models
+      - Characters
+      - Billing
+      - API Keys
+  - name: Experimental
+    tags:
+      - Preview
+externalDocs:
+  description: Venice.ai API documentation
+  url: 'https://docs.venice.ai'
+security:
+  - BearerAuth: []
