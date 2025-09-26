@@ -1,19 +1,122 @@
 # Venice.ai OpenAPI Specification v3.0.0
 
-## 📋 Overview
+<p align="center">
+  <a href="https://venice.ai" target="_blank">
+    <img src="https://raw.githubusercontent.com/Fayeblade1488/Venice_api_swagger/main/.github/banner.svg" alt="Venice API Banner">
+  </a>
+</p>
 
-This directory contains the enhanced Venice.ai OpenAPI specification with comprehensive improvements for developer experience and API documentation quality. The specification has been thoroughly enhanced through multiple phases of development to achieve enterprise-grade documentation standards.
+<p align="center">
+    Production-ready OpenAPI definition for the Venice.ai API. This repository hosts the canonical spec used to generate SDKs, publish reference docs, and validate compatibility.
+</p>
 
-## 🎯 Project Achievements
+<p align="center">
+    <a href="https://github.com/Fayeblade1488/Venice_api_swagger/blob/main/LICENSE">
+        <img src="https://img.shields.io/github/license/Fayeblade1488/Venice_api_swagger?style=for-the-badge" alt="License">
+    </a>
+    <a href="https://github.com/Fayeblade1488/Venice_api_swagger/tags">
+        <img src="https://img.shields.io/github/v/tag/Fayeblade1488/Venice_api_swagger?style=for-the-badge&sort=semver" alt="Version">
+    </a>
+    <a href="https://github.com/Fayeblade1488/Venice_api_swagger/actions/workflows/lint.yml">
+        <img src="https://img.shields.io/github/actions/workflow/status/Fayeblade1488/Venice_api_swagger/lint.yml?branch=main&style=for-the-badge" alt="Lint Status">
+    </a>
+</p>
 
-### ✅ **Schema Quality Pass (Completed)**
+---
+
+## TL;DR
+
+-   **Spec lives in**: `swagger.yaml` (release builds in `venice.swagger.release.v*.yaml`)
+-   **Lint and preview locally** in minutes
+-   **Generate SDKs** via `openapi-generator`
+-   **Publish docs** with your preferred pipeline (Swagger UI / Redoc)
+
+---
+
+## Contents
+
+```
+.
+├─ swagger.yaml                         # Source spec
+├─ venice.swagger.release.v3.yaml       # Release-ready spec
+├─ /docs/                               # Optional: static docs site
+└─ /scripts/                            # Lint/build helpers (optional)
+```
+
+## Quick Start
+
+### Validate in Browser (Zero Install)
+
+1.  Open **[editor.swagger.io](https://editor.swagger.io)**
+2.  Import `venice.swagger.release.v3.yaml`
+3.  Confirm no errors; warnings are documented in comments where applicable.
+
+### Local Validation (Recommended)
+
+```bash
+# Spectral
+npx @stoplight/spectral lint venice.swagger.release.v3.yaml
+
+# Redocly CLI
+npx @redocly/cli lint venice.swagger.release.v3.yaml
+```
+
+### Local Preview with Swagger UI
+
+```bash
+# Option A: Serve with Docker (swaggerapi/swagger-ui)
+docker run -p 8080:8080 -e SWAGGER_JSON=/tmp/spec.yaml \
+  -v "$PWD/venice.swagger.release.v3.yaml":/tmp/spec.yaml swaggerapi/swagger-ui
+
+# Option B: Redoc (static)
+npx @redocly/cli build-docs venice.swagger.release.v3.yaml -o docs/index.html
+```
+
+## Generate SDKs
+
+Using `openapi-generator` (Java-based tool):
+
+```bash
+# Install (one-time)
+brew install openapi-generator   # macOS
+# or: docker pull openapitools/openapi-generator-cli
+
+# Typescript (fetch)
+openapi-generator generate \
+  -i venice.swagger.release.v3.yaml \
+  -g typescript-fetch \
+  -o sdk/typescript
+
+# Python
+openapi-generator generate \
+  -i venice.swagger.release.v3.yaml \
+  -g python \
+  -o sdk/python
+```
+
+**Notes:**
+
+-   File upload endpoints are modeled with `oneOf` for binary (multipart), byte (base64 in JSON), and uri. Your generator should map these appropriately.
+-   Chat completion response `role` is restricted to `assistant` for OpenAI compatibility.
+
+## Mock Server (Optional)
+
+```bash
+docker run -p 4010:4010 -v "$PWD/venice.swagger.release.v3.yaml:/tmp/spec.yaml" stoplight/prism:4 \
+  mock -h 0.0.0.0 /tmp/spec.yaml
+```
+
+
+## Project Achievements
+
+### **Schema Quality Pass (Completed)**
 - Fixed all critical validation errors
 - Improved nullable field handling 
 - Enhanced type definitions and constraints
 - Resolved schema inconsistencies
 - **Result**: 0 validation errors, clean schema structure
 
-### ✅ **Operation-Level Completeness (Completed)**
+### **Operation-Level Completeness (Completed)**
 - Enhanced `/chat/completions` endpoint documentation
 - Added comprehensive parameter descriptions with examples
 - Improved request/response schemas with detailed examples
@@ -21,7 +124,7 @@ This directory contains the enhanced Venice.ai OpenAPI specification with compre
 - Enhanced error responses with practical examples
 - **Result**: Production-ready operation documentation
 
-### ✅ **Multilingual Code Samples (Completed)**
+### **Multilingual Code Samples (Completed)**
 - Added `x-codeSamples` with 8 comprehensive examples
 - **cURL**: Simple chat & streaming with web search
 - **JavaScript**: Basic fetch & Server-Sent Events streaming
@@ -45,10 +148,10 @@ The complete enhanced OpenAPI 3.0.0 specification featuring:
 ## 🔧 Technical Specifications
 
 ### **Validation Status**
-- ✅ **OpenAPI 3.0.0 Compliant**
-- ✅ **0 Critical Errors**
-- ⚠️ **21 Warnings** (unused components only)
-- 🎯 **Ready for Production Use**
+-  **OpenAPI 3.0.0 Compliant**
+-  **0 Critical Errors**
+-  **21 Warnings** (unused components only)
+-  **Ready for Production Use**
 
 ### **Enhanced Features**
 
@@ -138,7 +241,7 @@ x-tagGroups:
 - Rate limiting and authentication details
 - Comprehensive error handling guidance
 
-## 🚀 Usage Instructions
+## Usage Instructions
 
 ### **For API Documentation Tools**
 1. Use `venice.openapi.v3.yaml` with Redoc, Swagger UI, or similar tools
@@ -155,7 +258,7 @@ x-tagGroups:
 - Examples demonstrate all major Venice features
 - Authentication and error handling patterns included
 
-## 📊 Quality Metrics
+## Quality Metrics
 
 | Metric | Status | Details |
 |--------|--------|---------|
@@ -166,27 +269,8 @@ x-tagGroups:
 | **Authentication** | ✅ | Bearer token with examples |
 | **Features** | ✅ | Streaming, vision, tools, web search |
 
-## 🎉 Key Improvements Summary
 
-### **Schema Quality Pass**
-- ✅ Fixed critical validation errors
-- ✅ Improved nullable handling
-- ✅ Enhanced type definitions
-- ✅ Better schema constraints
-
-### **Operation Completeness**  
-- ✅ Comprehensive endpoint documentation
-- ✅ Rich request/response examples
-- ✅ Detailed parameter descriptions
-- ✅ Proper error handling
-
-### **Developer Experience**
-- ✅ Multilingual code samples
-- ✅ Ready-to-use integration examples
-- ✅ Best practices demonstrated
-- ✅ Feature-complete coverage
-
-## 📝 Notes
+## Notes
 
 - **API Key Placeholder**: All code samples use `{VENICE_API_KEY}` placeholder
 - **Production Ready**: Specification validates without errors
@@ -197,4 +281,3 @@ x-tagGroups:
 
 **Created**: 2025-09-26  
 **Version**: 3.0.0  
-**Status**: Production Ready ✅
