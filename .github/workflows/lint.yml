@@ -1,0 +1,23 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm install -g @stoplight/spectral-cli @redocly/cli
+      - name: Run Spectral lint
+        run: spectral lint /Users/super_user/Desktop/Venice_api_swagger/venice.swagger.release.v3.yaml
+      - name: Run Redocly lint
+        run: redocly lint /Users/super_user/Desktop/Venice_api_swagger/venice.swagger.release.v3.yaml

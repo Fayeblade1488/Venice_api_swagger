@@ -1,0 +1,26 @@
+venice.openapi.v3.yaml:
+  544:35  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  558:33  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  582:33  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  681:25  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  777:31  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  846:33  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  137:49  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  151:47  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  175:47  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  227:35  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  231:37  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  908:21  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  2:1     warning  info-license           Info object should contain `license` field.
+  868:5   warning  no-unused-components   Component: "GenerateImageRequest" is never used.
+  977:5   warning  no-unused-components   Component: "SimpleGenerateImageRequest" is never used.
+  1087:5  warning  no-unused-components   Component: "UpscaleImageRequest" is never used.
+  1148:5  warning  no-unused-components   Component: "EditImageRequest" is never used.
+  1176:5  warning  no-unused-components   Component: "CreateEmbeddingRequestSchema" is never used.
+  1259:5  warning  no-unused-components   Component: "CreateSpeechRequestSchema" is never used.
+  1370:5  warning  no-unused-components   Component: "BillingUsageRequest" is never used.
+  1414:5  warning  no-unused-components   Component: "BillingUsageResponse" is never used.
+  1535:5  warning  no-unused-components   Component: "ModelResponse" is never used.
+  1912:5  warning  no-unused-components   Component: "ModelTraitSchema" is never used.
+  1920:5  warning  no-unused-components   Component: "ModelCompatibilitySchema" is never used.
+

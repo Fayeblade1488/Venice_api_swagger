@@ -1,0 +1,26 @@
+venice.openapi.v3.yaml:
+  544:31  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  558:29  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  582:29  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  681:21  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  777:31  error    nullable-type-sibling  The `type` field must be defined when the `nullable` field is used.
+  846:29  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  137:45  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  151:43  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  175:43  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  227:31  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  231:33  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  907:17  error    struct                 `type` can be one of the following only: "object", "array", "string", "number", "integer", "boolean".
+  2:1     warning  info-license           Info object should contain `license` field.
+  868:5   warning  no-unused-components   Component: "GenerateImageRequest" is never used.
+  977:5   warning  no-unused-components   Component: "SimpleGenerateImageRequest" is never used.
+  1079:5  warning  no-unused-components   Component: "UpscaleImageRequest" is never used.
+  1140:5  warning  no-unused-components   Component: "EditImageRequest" is never used.
+  1168:5  warning  no-unused-components   Component: "CreateEmbeddingRequestSchema" is never used.
+  1251:5  warning  no-unused-components   Component: "CreateSpeechRequestSchema" is never used.
+  1362:5  warning  no-unused-components   Component: "BillingUsageRequest" is never used.
+  1406:5  warning  no-unused-components   Component: "BillingUsageResponse" is never used.
+  1527:5  warning  no-unused-components   Component: "ModelResponse" is never used.
+  1904:5  warning  no-unused-components   Component: "ModelTraitSchema" is never used.
+  1912:5  warning  no-unused-components   Component: "ModelCompatibilitySchema" is never used.
+

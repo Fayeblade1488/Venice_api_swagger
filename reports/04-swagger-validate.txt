@@ -1,0 +1,1 @@
+venice.openapi.v3.yaml is valid
