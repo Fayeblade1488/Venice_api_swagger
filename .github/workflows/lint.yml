@@ -18,6 +18,6 @@ jobs:
       - name: Install dependencies
         run: npm install -g @stoplight/spectral-cli @redocly/cli
       - name: Run Spectral lint
-        run: spectral lint /Users/super_user/Desktop/Venice_api_swagger/venice.swagger.release.v3.yaml
+        run: spectral lint ./venice.swagger.release.v3.yaml
       - name: Run Redocly lint
-        run: redocly lint /Users/super_user/Desktop/Venice_api_swagger/venice.swagger.release.v3.yaml
+        run: redocly lint /./venice.swagger.release.v3.yaml
