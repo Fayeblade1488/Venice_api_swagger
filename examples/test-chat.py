@@ -46,7 +46,8 @@ def test_chat_completion():
                 ],
                 'temperature': 0.7,
                 'max_completion_tokens': 100
-            }
+            },
+            timeout=30
         )
 
         if not response.ok:
