@@ -41,6 +41,7 @@
 ├─ .spectral.yaml               # Configuration for the Spectral linter
 ├─ lint.sh                      # Script to run local validation
 ├─ package.json                 # Node.js dependencies for linting
+├─ examples/                    # Live test scripts (JS, Python, Bash)
 └─ README.md                    # This file
 ```
 
@@ -80,6 +81,27 @@ docker run -p 8080:8080 -e SWAGGER_JSON=/tmp/spec.yaml \
 # Option B: Redoc (static)
 npx @redocly/cli build-docs venice.openapi.v3.yaml -o docs/index.html
 ```
+
+### Live API Testing
+
+Test the Venice.ai API with your own API key using the provided example scripts in the `examples/` directory.
+
+**Available Tests:**
+- ✅ Basic chat completion (JavaScript, Python, Bash)
+- ✅ Streaming responses (JavaScript)
+
+**Quick Test:**
+```bash
+# Set your API key
+export VENICE_API_KEY=your-api-key-here
+
+# Run a test
+node examples/test-chat.js
+```
+
+See [examples/README.md](examples/README.md) for complete documentation on running live tests.
+
+---
 
 ## Generate SDKs
 
