@@ -653,7 +653,7 @@ paths:
                           reasoning_content: null
                           role: assistant
                           tool_calls: []
-                        stop_reason: null
+                        stop_reason: stop
                   created:
                     description: The time at which the request was created.
                     type: integer
@@ -785,7 +785,7 @@ paths:
                         reasoning_content: null
                         role: assistant
                         tool_calls: []
-                      stop_reason: null
+                      stop_reason: stop
                   created: 1739928524
                   id: chatcmpl-a81fbc2d81a7a083bb83ccf9f44c6e5e
                   model: qwen-2.5-vl
