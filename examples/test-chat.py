@@ -31,6 +31,7 @@ def test_chat_completion():
 
     try:
         response = requests.post(
+        response = requests.post(
             'https://api.venice.ai/api/v1/chat/completions',
             headers={
                 'Authorization': f'Bearer {VENICE_API_KEY}',
@@ -46,9 +47,8 @@ def test_chat_completion():
                 ],
                 'temperature': 0.7,
                 'max_completion_tokens': 100
-            },
-            timeout=30
-        )
+            }
+        , timeout=30)
 
         if not response.ok:
             error = response.json()
