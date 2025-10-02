@@ -53,7 +53,11 @@ def test_chat_completion():
         if not response.ok:
             try:
                 error = response.json()
-                error_msg = error.get("error", {}).get("message", json.dumps(error))
+                error_field = error.get("error", {})
+                if isinstance(error_field, dict):
+                    error_msg = error_field.get("message", json.dumps(error))
+                else:
+                    error_msg = str(error_field)
             except Exception:
                 error_msg = f"HTTP {response.status_code}: {response.text}"
             print(f'❌ API Error: {error_msg}', file=sys.stderr)
