@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/Fayeblade1488/Venice_api_swagger#readme",
   "devDependencies": {
-    "@redocly/cli": "1.17.0",
+    "@redocly/cli": "1.34.5",
     "@stoplight/spectral-cli": "6.11.0"
   },
   "type": "commonjs"
