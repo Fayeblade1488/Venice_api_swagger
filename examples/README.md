@@ -140,7 +140,7 @@ Install jq for JSON parsing:
 
 After verifying your API works:
 1. Check the [OpenAPI Specification](https://github.com/Fayeblade1488/Venice_api_swagger/blob/main/venice.openapi.v3.yaml) for complete API documentation
-2. Read the [Quick Start Guide](../QUICKSTART.md) for more examples
+2. Read the [Quick Start Guide](https://docs.venice.ai/quickstart) for more examples
 3. Explore advanced features like web search, vision, and function calling
 4. Review the [README](../README.md) for SDK generation and integration options
 
