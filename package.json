@@ -4,11 +4,25 @@
   "description": "OpenAPI specification for Venice.ai API",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint:api": "bash ./lint.sh",
+    "lint:api:spectral": "spectral lint venice.openapi.v3.yaml",
+    "lint:api:redocly": "redocly lint venice.openapi.v3.yaml"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fayeblade1488/Venice_api_swagger.git"
+  },
+  "keywords": [],
   "author": "",
   "license": "MIT",
-  "dependencies": {
-    "mobx-react-lite": "^3.4.0"
-  }
+  "bugs": {
+    "url": "https://github.com/Fayeblade1488/Venice_api_swagger/issues"
+  },
+  "homepage": "https://github.com/Fayeblade1488/Venice_api_swagger#readme",
+  "devDependencies": {
+    "@redocly/cli": "1.17.0",
+    "@stoplight/spectral-cli": "6.11.0"
+  },
+  "type": "commonjs"
 }

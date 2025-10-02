@@ -26,8 +26,8 @@
 
 ## TL;DR
 
--   **Spec lives in**: `swagger.yaml` (release builds in `venice.swagger.release.v*.yaml`)
--   **Lint and preview locally** in minutes
+-   **Spec lives in**: `venice.openapi.v3.yaml`
+-   **Lint and preview locally** using the provided `lint.sh` script.
 -   **Generate SDKs** via `openapi-generator`
 -   **Publish docs** with your preferred pipeline (Swagger UI / Redoc)
 
@@ -37,10 +37,11 @@
 
 ```
 .
-├─ swagger.yaml                         # Source spec
-├─ venice.swagger.release.v3.yaml       # Release-ready spec
-├─ /docs/                               # Optional: static docs site
-└─ /scripts/                            # Lint/build helpers (optional)
+├─ venice.openapi.v3.yaml       # The complete OpenAPI specification
+├─ .spectral.yaml               # Configuration for the Spectral linter
+├─ lint.sh                      # Script to run local validation
+├─ package.json                 # Node.js dependencies for linting
+└─ README.md                    # This file
 ```
 
 ## Quick Start
@@ -48,28 +49,36 @@
 ### Validate in Browser (Zero Install)
 
 1.  Open **[editor.swagger.io](https://editor.swagger.io)**
-2.  Import `venice.swagger.release.v3.yaml`
+2.  Import `venice.openapi.v3.yaml`
 3.  Confirm no errors; warnings are documented in comments where applicable.
 
 ### Local Validation (Recommended)
 
-```bash
-# Spectral
-npx @stoplight/spectral lint venice.swagger.release.v3.yaml
+A `lint.sh` script is provided to simplify local validation. It runs both Spectral and Redocly linters to ensure the OpenAPI specification is valid and adheres to style guidelines.
 
-# Redocly CLI
-npx @redocly/cli lint venice.swagger.release.v3.yaml
+**Prerequisites:**
+- Make sure `npm` is installed.
+- Install the required Node.js dependencies:
+  ```bash
+  npm install
+  ```
+
+**Usage:**
+To run the linters, execute the script from the root of the repository:
+```bash
+./lint.sh
 ```
+This will validate the `venice.openapi.v3.yaml` file and report any errors or warnings.
 
 ### Local Preview with Swagger UI
 
 ```bash
 # Option A: Serve with Docker (swaggerapi/swagger-ui)
 docker run -p 8080:8080 -e SWAGGER_JSON=/tmp/spec.yaml \
-  -v "$PWD/venice.swagger.release.v3.yaml":/tmp/spec.yaml swaggerapi/swagger-ui
+  -v "$PWD/venice.openapi.v3.yaml":/tmp/spec.yaml swaggerapi/swagger-ui
 
 # Option B: Redoc (static)
-npx @redocly/cli build-docs venice.swagger.release.v3.yaml -o docs/index.html
+npx @redocly/cli build-docs venice.openapi.v3.yaml -o docs/index.html
 ```
 
 ## Generate SDKs
@@ -83,13 +92,13 @@ brew install openapi-generator   # macOS
 
 # Typescript (fetch)
 openapi-generator generate \
-  -i venice.swagger.release.v3.yaml \
+  -i venice.openapi.v3.yaml \
   -g typescript-fetch \
   -o sdk/typescript
 
 # Python
 openapi-generator generate \
-  -i venice.swagger.release.v3.yaml \
+  -i venice.openapi.v3.yaml \
   -g python \
   -o sdk/python
 ```
@@ -102,55 +111,16 @@ openapi-generator generate \
 ## Mock Server (Optional)
 
 ```bash
-docker run -p 4010:4010 -v "$PWD/venice.swagger.release.v3.yaml:/tmp/spec.yaml" stoplight/prism:4 \
+docker run -p 4010:4010 -v "$PWD/venice.openapi.v3.yaml:/tmp/spec.yaml" stoplight/prism:4 \
   mock -h 0.0.0.0 /tmp/spec.yaml
 ```
-
-
-## Project Achievements
-
-### **Schema Quality Pass (Completed)**
-- Fixed all critical validation errors
-- Improved nullable field handling 
-- Enhanced type definitions and constraints
-- Resolved schema inconsistencies
-- **Result**: 0 validation errors, clean schema structure
-
-### **Operation-Level Completeness (Completed)**
-- Enhanced `/chat/completions` endpoint documentation
-- Added comprehensive parameter descriptions with examples
-- Improved request/response schemas with detailed examples
-- Added logical tag groups (`x-tagGroups`) for better organization
-- Enhanced error responses with practical examples
-- **Result**: Production-ready operation documentation
-
-### **Multilingual Code Samples (Completed)**
-- Added `x-codeSamples` with 8 comprehensive examples
-- **cURL**: Simple chat & streaming with web search
-- **JavaScript**: Basic fetch & Server-Sent Events streaming
-- **Python**: Simple chat, SSE streaming, vision chat, & function calling
-- All examples include authentication, error handling, and best practices
-- **Result**: Developer-ready integration examples
-
-## 📁 Files Included
-
-### `venice.openapi.v3.yaml`
-The complete enhanced OpenAPI 3.0.0 specification featuring:
-
-- **Enhanced Info Section**: Comprehensive API description with privacy guarantees
-- **Logical Organization**: Tag groups for better navigation
-- **Detailed Operations**: Complete `/chat/completions` documentation
-- **Rich Examples**: 6 request examples covering all major use cases
-- **Code Samples**: 8 multilingual integration examples
-- **Error Handling**: Comprehensive error response documentation
-- **Security**: Detailed authentication documentation
 
 ## 🔧 Technical Specifications
 
 ### **Validation Status**
 -  **OpenAPI 3.0.0 Compliant**
 -  **0 Critical Errors**
--  **21 Warnings** (unused components only)
+-  **6 Warnings** (related to example validation)
 -  **Ready for Production Use**
 
 ### **Enhanced Features**
@@ -262,7 +232,7 @@ x-tagGroups:
 
 | Metric | Status | Details |
 |--------|--------|---------|
-| **Validation** | ✅ | 0 errors, 21 minor warnings |
+| **Validation** | ✅ | 0 errors, 6 minor warnings |
 | **Coverage** | ✅ | Complete `/chat/completions` documentation |
 | **Examples** | ✅ | 6 request + 8 code samples |
 | **Error Handling** | ✅ | All HTTP status codes documented |
@@ -280,4 +250,4 @@ x-tagGroups:
 ---
 
 **Created**: 2025-09-26  
-**Version**: 3.0.0  
+**Version**: 3.0.0

@@ -1,0 +1,11 @@
+extends:
+  - "spectral:oas"
+
+rules:
+  oas3-schema: error
+  no-$ref-siblings: error
+
+  # doc hygiene rules – soft fail
+  operation-description: warn
+  info-description: warn
+  tag-description: warn
