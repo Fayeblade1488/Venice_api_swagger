@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - language: python
+          - language: javascript-typescript
             build-mode: none     # interpreted; no build
           # Uncomment/add compiled languages only if present in repo:
           # - language: c-cpp
@@ -44,8 +44,6 @@ jobs:
           #   build-mode: autobuild
           # - language: swift
           #   build-mode: autobuild
-          # - language: javascript-typescript
-          #   build-mode: none     # interpreted; no build
 
     steps:
       - name: Checkout repository
