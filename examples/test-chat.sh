@@ -50,7 +50,7 @@ body=$(echo "$response" | head -n-1)
 
 if [ "$http_code" -ne 200 ]; then
   echo "❌ API Error (HTTP $http_code):" >&2
-  echo "$body" | jq -r '.error.message // .' >&2
+  echo "$body" | jq -r '.error.message // "Unknown error"' >&2
   exit 1
 fi
 
