@@ -25,20 +25,25 @@ fi
 echo "🚀 Testing Venice.ai Chat Completion API..."
 echo ""
 
+payload=$(cat <<EOF
+{
+  "model": "venice-uncensored",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello! Say \"Venice API is working!\" if you can hear me."
+    }
+  ],
+  "temperature": 0.7,
+  "max_completion_tokens": 100
+}
+EOF
+)
+
 response=$(curl -s -w "\n%{http_code}" -X POST "https://api.venice.ai/api/v1/chat/completions" \
   -H "Authorization: Bearer ${VENICE_API_KEY}" \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "venice-uncensored",
-    "messages": [
-      {
-        "role": "user",
-        "content": "Hello! Say \"Venice API is working!\" if you can hear me."
-      }
-    ],
-    "temperature": 0.7,
-    "max_completion_tokens": 100
-  }')
+  -d "$payload")
 
 http_code=$(echo "$response" | tail -n1)
 body=$(echo "$response" | head -n-1)
