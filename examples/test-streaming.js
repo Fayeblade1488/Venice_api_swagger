@@ -83,7 +83,7 @@ async function testStreamingChat() {
               fullContent += content;
             }
           } catch (e) {
-            // Skip invalid JSON
+            // Invalid JSON may occur if a chunk contains incomplete data, partial SSE events, or malformed SSE data; skip such cases.
           }
         }
       }
